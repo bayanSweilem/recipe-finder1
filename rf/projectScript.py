@@ -210,43 +210,57 @@ def add_func():
 
 # filter Recipes tab
 def filter_func():
-    st.subheader("Filter Recipes")
-    col1, col2, col3 = st.columns(3) #Create columns for filtering the recipes
+    st.header("Filter Recipes by Ingredients")
+    # Get ingredients input from the user
+    ingredients_input = st.text_input("Enter ingredients (comma separated):").strip().lower()
 
-    with col1:
-        difficulty_filter = st.selectbox("Difficulty", ["Any", "Easy", "Medium", "Hard"])
-    with col2:
-        max_time = st.slider("Max Prep Time (mins)", 0, 120, 60)
-    with col3:
-        min_rating = st.slider("Min Rating", 0.0, 5.0, 3.0, 0.1)
+    if ingredients_input:
+        # Split the input into a list and remove extra spaces
+        ingredients_list = [ingredient.strip() for ingredient in ingredients_input.split(',')]
+        matching_recipes = []
 
-    filtered = {} #empty dict to store filtered recipes
-    for name, data in st.session_state.recipes.items(): #loop through each recipe in the dictionary
-        if difficulty_filter != "Any" and data['Difficulty'] != difficulty_filter:#Skip the recipe if its difficulty doesn't match the filter
-            continue
-        if data['Prep Time'] > max_time: #If the recipe's prep time exceeds the maximum amount of time specified, skip it.
-            continue
-        if (data.get('Rating') or 0) < min_rating:
-            continue
-        filtered[name] = data #add the recipe to the filtered dictionary if all requirements are satisfied.
+        # Loop through all recipes in the session state
+        for recipe_name, recipe_data in st.session_state.recipes.items():
+            # Ensure that the ingredients are a list and not empty
+            recipe_ingredients = recipe_data.get("Ingredients", [])
+            if recipe_ingredients and isinstance(recipe_ingredients, list):
+                # Check if all input ingredients are in the recipe's ingredients
+                if all(ingredient.lower() in [i.lower() for i in recipe_ingredients] for ingredient in ingredients_list):
+                    matching_recipes.append(recipe_name)
 
-    if filtered:
-        st.write("Found %d recipes:" % len(filtered)) #Show the quantity of recipes that were located
-        for name, data in filtered.items():#iterate through every recipe that has been filtered.
-            with st.container():
-                st.markdown("### %s" % name)
-                if data.get('Image'):
-                    st.markdown("""
+        # If matching recipes are found, display them
+        if matching_recipes:
+            st.write("Recipes that match your ingredients:")
+            for name in matching_recipes:
+                data = st.session_state.recipes[name]
+                with st.container():
+                    # Display recipe name
+                    st.markdown("### %s" % name)
+                    
+                    # Display recipe image if available
+                    if data.get('Image'):
+                        st.markdown("""
                         <img src="%s" style="width:300px; height:200px; object-fit:cover; border-radius:15px; margin-bottom:10px;">
                         """ % data['Image'], unsafe_allow_html=True)
-                st.write("**Cuisine:** %s" % data['Cuisine'])
-                st.write("**Ingredients:** %s" % ', '.join(data['Ingredients']))#ingredients as a list separated by commas
-                st.write("**Prep Time:** %d mins" % data['Prep Time'])
-                st.write("**Difficulty:** %s" % data['Difficulty'])
-                st.write("**Rating:** %s" % data.get('Rating', 'Not rated'))
-                st.markdown("---")
-    else:
-        st.warning("No recipes match these filters.")
+                    
+                    # Check if Ingredients exist and are in a list format
+                    ingredients = data.get('Ingredients', None)
+                    if ingredients and isinstance(ingredients, list):
+                        ingredients_display = ', '.join(ingredients)
+                    else:
+                        ingredients_display = "No ingredients available"
+
+                    # Display recipe details
+                    st.write("**Cuisine:** %s" % data['Cuisine'])
+                    st.write("**Ingredients:** %s" % ingredients_display)
+                    st.write("**Prep Time:** %d mins" % data['Prep Time'])
+                    st.write("**Difficulty:** %s" % data['Difficulty'])
+                    st.write("**Rating:** %s" % data.get('Rating', 'Not rated'))
+                    st.markdown("---")
+        else:
+            # If no recipes match, show a warning
+            st.warning("No matching recipes found.")
+
 
 
 #recommendations tab
