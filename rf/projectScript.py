@@ -137,7 +137,7 @@ def find_func():
                     <img src="%s" style="width:300px; height:200px; object-fit:cover; border-radius:15px; margin-bottom:10px;">
                     """ % data['Image'], unsafe_allow_html=True)
                 
-                # get ingredients list,
+                # get ingredients list, show it nicely
                 ingredients = data.get('Ingredients', None) 
                 if ingredients is None:
                     ingredients_display = ""
@@ -210,56 +210,46 @@ def add_func():
 
 # filter Recipes tab
 def filter_func():
-    st.header("Filter Recipes by Ingredients")
-    # Get ingredients input from the user
-    ingredients_input = st.text_input("Enter ingredients (comma separated):").strip().lower()
+    st.header("Filter Recipes")
 
-    if ingredients_input:
-        # Split the input into a list and remove extra spaces
-        ingredients_list = [ingredient.strip() for ingredient in ingredients_input.split(',')]
-        matching_recipes = []
+    # Collect filter options from the user
+    preferred_cuisine = st.text_input("Enter preferred cuisine (optional):").strip()
+    max_prep_time = st.number_input("Enter maximum prep time (in minutes):", min_value=0, value=60)
+    difficulty = st.selectbox("Select difficulty level:", ["Any", "Easy", "Medium", "Hard"])
 
-        # Loop through all recipes in the session state
-        for recipe_name, recipe_data in st.session_state.recipes.items():
-            # Ensure that the ingredients are a list and not empty
-            recipe_ingredients = recipe_data.get("Ingredients", [])
-            if recipe_ingredients and isinstance(recipe_ingredients, list):
-                # Check if all input ingredients are in the recipe's ingredients
-                if all(ingredient.lower() in [i.lower() for i in recipe_ingredients] for ingredient in ingredients_list):
-                    matching_recipes.append(recipe_name)
+    matching_recipes = []
 
-        # If matching recipes are found, display them
-        if matching_recipes:
-            st.write("Recipes that match your ingredients:")
-            for name in matching_recipes:
-                data = st.session_state.recipes[name]
-                with st.container():
-                    # Display recipe name
-                    st.markdown("### %s" % name)
-                    
-                    # Display recipe image if available
-                    if data.get('Image'):
-                        st.markdown("""
-                        <img src="%s" style="width:300px; height:200px; object-fit:cover; border-radius:15px; margin-bottom:10px;">
-                        """ % data['Image'], unsafe_allow_html=True)
-                    
-                    # Check if Ingredients exist and are in a list format
-                    ingredients = data.get('Ingredients', None)
-                    if ingredients and isinstance(ingredients, list):
-                        ingredients_display = ', '.join(ingredients)
-                    else:
-                        ingredients_display = "No ingredients available"
+    # Loop through all recipes and apply filters
+    for recipe_name, recipe_data in st.session_state.recipes.items():
+        # Apply filters
+        matches_cuisine = (preferred_cuisine.lower() in recipe_data["Cuisine"].lower()) if preferred_cuisine else True
+        matches_time = recipe_data["Prep Time"] <= max_prep_time
+        matches_difficulty = (difficulty == "Any") or (recipe_data["Difficulty"] == difficulty)
 
-                    # Display recipe details
-                    st.write("**Cuisine:** %s" % data['Cuisine'])
-                    st.write("**Ingredients:** %s" % ingredients_display)
-                    st.write("**Prep Time:** %d mins" % data['Prep Time'])
-                    st.write("**Difficulty:** %s" % data['Difficulty'])
-                    st.write("**Rating:** %s" % data.get('Rating', 'Not rated'))
-                    st.markdown("---")
-        else:
-            # If no recipes match, show a warning
-            st.warning("No matching recipes found.")
+        # If all conditions are met, add to matching recipes
+        if matches_cuisine and matches_time and matches_difficulty:
+            matching_recipes.append(recipe_name)
+
+    # If there are matching recipes, display them
+    if matching_recipes:
+        st.write("Matching recipes based on your filters:")
+        for name in matching_recipes:
+            data = st.session_state.recipes[name]
+            with st.container():
+                st.markdown("### %s" % name)
+                if data.get('Image'):
+                    st.markdown("""
+                    <img src="%s" style="width:300px; height:200px; object-fit:cover; border-radius:15px; margin-bottom:10px;">
+                    """ % data['Image'], unsafe_allow_html=True)
+                st.write("**Cuisine:** %s" % data['Cuisine'])
+                st.write("**Ingredients:** %s" % ', '.join(data['Ingredients']) if data.get('Ingredients') else "None")
+                st.write("**Prep Time:** %d mins" % data['Prep Time'])
+                st.write("**Difficulty:** %s" % data['Difficulty'])
+                st.write("**Rating:** %s" % data.get('Rating', 'Not rated'))
+                st.markdown("---")
+    else:
+        st.warning("No recipes found that match your filters.")
+
 
 
 
@@ -268,36 +258,30 @@ def rec_func():
     st.header("Recipe Recommendations")
     preferred_cuisine = st.text_input("Enter your preferred cuisine (e.g., Italian, Indian):")
 
-    if preferred_cuisine:  # Process it if the user has selected a cuisine. Create a list at the beginning to hold recipe names that match.
-        matching_recipes = []
-        for recipe_name, recipe_data in st.session_state.recipes.items():  # loop through cuisines
-            if recipe_data["Cuisine"].lower() == preferred_cuisine.lower():
-                matching_recipes.append(recipe_name)  # add the matching recipe to the list
+    if preferred_cuisine:  # Process it if the user has selected a cuisine.
+        matching_recipes = []  # Create a list to store recipes that match.
+        
+        # Loop through recipes in session state
+        for recipe_name, recipe_data in st.session_state.recipes.items():
+            # Check if the cuisine matches
+            if recipe_data["Cuisine"] and preferred_cuisine.lower() in recipe_data["Cuisine"].lower():
+                matching_recipes.append(recipe_name)
 
-        if matching_recipes:
-            st.write(f"Based on your love for {preferred_cuisine}, try these recipes:")
-            for name in matching_recipes:  # loop through the matching recipes
+        if matching_recipes:  # If matching recipes are found, display them.
+            st.write("Based on your love for %s, try these recipes:" % preferred_cuisine)
+            for name in matching_recipes:
                 data = st.session_state.recipes[name]
                 with st.container():
-                    st.markdown(f"### {name}")
-                    
+                    st.markdown("### %s" % name)
                     if data.get('Image'):
-                        st.markdown(f"""
-                        <img src="{data['Image']}" style="width:300px; height:200px; object-fit:cover; border-radius:15px; margin-bottom:10px;">
-                        """, unsafe_allow_html=True)
-                    
-                    # Check if Ingredients exist and format them
-                    ingredients = data.get('Ingredients', None)
-                    if ingredients and isinstance(ingredients, list):
-                        ingredients_display = ', '.join(ingredients)
-                    else:
-                        ingredients_display =""
-
-                    st.write(f"**Cuisine:** {data['Cuisine']}")
-                    st.write(f"**Ingredients:** {ingredients_display}")
-                    st.write(f"**Prep Time:** {data['Prep Time']} mins")
-                    st.write(f"**Difficulty:** {data['Difficulty']}")
-                    st.write(f"**Rating:** {data.get('Rating', None)}")
+                        st.markdown("""
+                        <img src="%s" style="width:300px; height:200px; object-fit:cover; border-radius:15px; margin-bottom:10px;">
+                        """ % data['Image'], unsafe_allow_html=True)
+                    st.write("**Cuisine:** %s" % data['Cuisine'])
+                    st.write("**Ingredients:** %s" % ', '.join(data['Ingredients']) if data.get('Ingredients') else "None")
+                    st.write("**Prep Time:** %d mins" % data['Prep Time'])
+                    st.write("**Difficulty:** %s" % data['Difficulty'])
+                    st.write("**Rating:** %s" % data.get('Rating', 'Not rated'))
                     st.markdown("---")
         else:
             st.warning("No matching recipes found for this cuisine.")
