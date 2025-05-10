@@ -137,7 +137,7 @@ def find_func():
                     <img src="%s" style="width:300px; height:200px; object-fit:cover; border-radius:15px; margin-bottom:10px;">
                     """ % data['Image'], unsafe_allow_html=True)
                 
-                # get ingredients list, show it nicely
+                # get ingredients list,
                 ingredients = data.get('Ingredients', None) 
                 if ingredients is None:
                     ingredients_display = ""
